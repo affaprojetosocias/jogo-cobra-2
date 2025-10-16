@@ -4,10 +4,19 @@ export const GameConfig = {
   speedGrowthFactor: 6, // incremento de velocidade por comida coletada
   segmentSpacing: 10, // espaçamento alvo entre os segmentos do corpo
   initialLength: 14, // quantidade inicial de segmentos
-  arenaPadding: 60, // margem interna para geração de comida
+  arenaPadding: 120, // margem interna para geração de comida
   foodSpawnInterval: 4, // intervalo (s) para forçar novo spawn caso não exista
   arenaColor: '#120a2c',
   gridSize: 24,
   particleTTL: 0.6,
   particleCount: 12,
+  worldWidth: 2600,
+  worldHeight: 2000,
+  aiSnakeCount: 5,
+  maxFoodItems: 14,
+  aiColors: ['#8de0ff', '#ffd08d', '#9dffb0', '#ffb3f5', '#a3a3ff', '#ff9e9e'],
+  aiAvoidanceRadius: 90,
+  aiAvoidanceStrength: 240,
+  aiWanderStrength: 0.6,
+  aiRetargetDelay: 2.5,
 };

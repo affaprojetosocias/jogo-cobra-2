@@ -6,6 +6,7 @@ export class InputManager {
     this.mouseVector = null;
     this.keys = new Set();
     this.isPointerActive = false;
+    this.pointerAnchor = null;
 
     this.handleKeyDown = this.handleKeyDown.bind(this);
     this.handleKeyUp = this.handleKeyUp.bind(this);
@@ -58,11 +59,16 @@ export class InputManager {
     this.mouseVector = null;
   }
 
+  setPointerAnchor(x, y) {
+    this.pointerAnchor = { x, y };
+  }
+
   // Converte posição do ponteiro para vetor relativo ao centro da tela.
   updatePointerVector(event) {
     const rect = this.canvas.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
+    const anchor = this.pointerAnchor || { x: rect.width / 2, y: rect.height / 2 };
+    const cx = rect.left + anchor.x;
+    const cy = rect.top + anchor.y;
     const dx = event.clientX - cx;
     const dy = event.clientY - cy;
     const length = Math.hypot(dx, dy) || 1;

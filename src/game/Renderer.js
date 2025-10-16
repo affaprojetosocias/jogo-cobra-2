@@ -19,42 +19,44 @@ export class Renderer {
     this.ctx.scale(ratio, ratio);
   }
 
-  clear(arena) {
+  clear(camera) {
     const ctx = this.ctx;
     ctx.fillStyle = GameConfig.arenaColor;
-    ctx.fillRect(0, 0, arena.width, arena.height);
+    ctx.fillRect(0, 0, camera.width, camera.height);
 
-    // Desenha linhas suaves de grade para sensação futurista.
+    // Desenha linhas suaves de grade alinhadas com o mundo.
     ctx.save();
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
     ctx.lineWidth = 1;
-    for (let x = 0; x < arena.width; x += GameConfig.gridSize) {
+    const startX = Math.floor(camera.x / GameConfig.gridSize) * GameConfig.gridSize;
+    const endX = camera.x + camera.width;
+    for (let x = startX; x <= endX; x += GameConfig.gridSize) {
+      const screenX = x - camera.x;
       ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, arena.height);
+      ctx.moveTo(screenX, 0);
+      ctx.lineTo(screenX, camera.height);
       ctx.stroke();
     }
-    for (let y = 0; y < arena.height; y += GameConfig.gridSize) {
+
+    const startY = Math.floor(camera.y / GameConfig.gridSize) * GameConfig.gridSize;
+    const endY = camera.y + camera.height;
+    for (let y = startY; y <= endY; y += GameConfig.gridSize) {
+      const screenY = y - camera.y;
       ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(arena.width, y);
+      ctx.moveTo(0, screenY);
+      ctx.lineTo(camera.width, screenY);
       ctx.stroke();
     }
     ctx.restore();
   }
 
-  drawFood(foodItems, time) {
+  drawFood(foodItems, time, camera) {
     const ctx = this.ctx;
     for (const food of foodItems) {
       const radius = food.getAnimatedRadius(time);
-      const gradient = ctx.createRadialGradient(
-        food.position.x,
-        food.position.y,
-        radius * 0.3,
-        food.position.x,
-        food.position.y,
-        radius
-      );
+      const fx = food.position.x - camera.x;
+      const fy = food.position.y - camera.y;
+      const gradient = ctx.createRadialGradient(fx, fy, radius * 0.3, fx, fy, radius);
       gradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
       gradient.addColorStop(0.4, 'rgba(255, 200, 80, 0.9)');
       gradient.addColorStop(1, 'rgba(255, 80, 160, 0.0)');
@@ -63,21 +65,23 @@ export class Renderer {
       ctx.globalCompositeOperation = 'lighter';
       ctx.fillStyle = gradient;
       ctx.beginPath();
-      ctx.arc(food.position.x, food.position.y, radius, 0, Math.PI * 2);
+      ctx.arc(fx, fy, radius, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
 
       // Desenha partículas residuais.
       ctx.fillStyle = 'rgba(255, 220, 150, 0.8)';
       for (const particle of food.particles) {
+        const px = particle.x - camera.x;
+        const py = particle.y - camera.y;
         ctx.beginPath();
-        ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
+        ctx.arc(px, py, particle.radius, 0, Math.PI * 2);
         ctx.fill();
       }
     }
   }
 
-  drawSnake(snake) {
+  drawSnake(snake, camera) {
     const ctx = this.ctx;
     const segments = snake.getSegments();
 
@@ -92,36 +96,45 @@ export class Renderer {
       const progress = i / segments.length;
       const width = 10 + Math.sin(progress * Math.PI) * 6;
 
-      const gradient = ctx.createLinearGradient(current.x, current.y, next.x, next.y);
-      gradient.addColorStop(0, 'rgba(120, 115, 245, 0.4)');
+      const gradient = ctx.createLinearGradient(
+        current.x - camera.x,
+        current.y - camera.y,
+        next.x - camera.x,
+        next.y - camera.y
+      );
+      gradient.addColorStop(0, 'rgba(120, 115, 245, 0.35)');
       gradient.addColorStop(1, snake.color);
 
       ctx.strokeStyle = gradient;
       ctx.lineWidth = width;
       ctx.beginPath();
-      ctx.moveTo(current.x, current.y);
-      ctx.lineTo(next.x, next.y);
+      ctx.moveTo(current.x - camera.x, current.y - camera.y);
+      ctx.lineTo(next.x - camera.x, next.y - camera.y);
       ctx.stroke();
     }
 
     // Cabeça com destaque brilhante.
     const head = segments[0];
     const eyeOffset = { x: Math.cos(snake.direction) * 6, y: Math.sin(snake.direction) * 6 };
+    const hx = head.x - camera.x;
+    const hy = head.y - camera.y;
     ctx.fillStyle = '#fff';
     ctx.beginPath();
-    ctx.arc(head.x, head.y, 10, 0, Math.PI * 2);
+    ctx.arc(hx, hy, 10, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = snake.color;
     ctx.beginPath();
-    ctx.arc(head.x + eyeOffset.x, head.y + eyeOffset.y, 6, 0, Math.PI * 2);
+    ctx.arc(hx + eyeOffset.x, hy + eyeOffset.y, 6, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();
   }
 
-  draw(arena, snake, foodItems, time) {
-    this.clear(arena);
-    this.drawFood(foodItems, time);
-    this.drawSnake(snake);
+  draw(arena, snakes, foodItems, time, camera) {
+    this.clear(camera);
+    this.drawFood(foodItems, time, camera);
+    for (const snake of snakes) {
+      this.drawSnake(snake, camera);
+    }
   }
 }
