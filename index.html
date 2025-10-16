@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Snake.io+ Clone</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="background"></div>
+    <main class="game-wrapper">
+      <canvas id="game-canvas"></canvas>
+      <section class="hud">
+        <div class="score">Pontuação: <span id="score-value">0</span></div>
+        <div class="time">Tempo: <span id="time-value">00:00</span></div>
+        <div class="highscore">Recorde: <span id="highscore-value">0</span></div>
+      </section>
+      <div id="start-overlay" class="overlay visible">
+        <div class="overlay-content">
+          <h1>Snake.io+</h1>
+          <p>Deslize pelo mapa, colete energia e cresça sem limites!</p>
+          <p class="hint">Toque ou pressione qualquer tecla para começar</p>
+        </div>
+      </div>
+      <div id="gameover-overlay" class="overlay">
+        <div class="overlay-content">
+          <h2>Fim de Jogo</h2>
+          <p>Sua pontuação: <span id="final-score">0</span></p>
+          <button id="restart-button">Jogar novamente</button>
+        </div>
+      </div>
+    </main>
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>
