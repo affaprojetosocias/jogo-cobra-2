@@ -7,43 +7,49 @@ export class FoodManager {
     this.arena = arena;
     this.foodItems = [];
     this.lastSpawnTime = 0;
+    this.targetFoodCount = GameConfig.maxFoodItems;
+    for (let i = 0; i < this.targetFoodCount; i++) {
+      this.spawnFood();
+    }
   }
 
-  // Atualiza comida existente e garante que sempre exista ao menos um item disponível.
-  update(dt, time, snake) {
+  // Atualiza comida existente e garante que sempre exista uma grande variedade no cenário.
+  update(dt, time, snakes) {
     this.foodItems.forEach((food) => food.update(dt));
 
     // Remove partículas de comidas já coletadas.
     this.foodItems = this.foodItems.filter((food) => !food.collected || food.particles.length > 0);
 
-    // Força aparecimento de nova comida se estiver demorando demais.
-    if ((time - this.lastSpawnTime > GameConfig.foodSpawnInterval && this.foodItems.length === 0) || this.foodItems.every((f) => f.collected)) {
-      this.spawnFood();
-    }
-
-    // Garante pelo menos um item no mapa.
-    if (this.foodItems.length === 0) {
-      this.spawnFood();
-    }
-
-    // Detecta coleta pela cobra.
-    for (const food of this.foodItems) {
-      if (food.collected) continue;
-      const head = snake.headPosition;
-      const dx = head.x - food.position.x;
-      const dy = head.y - food.position.y;
-      const radius = food.baseRadius + snake.radius;
-      if (dx * dx + dy * dy < radius * radius) {
-        food.collected = true;
-        food.burst();
-        this.lastSpawnTime = time;
-        snake.grow();
-        this.spawnFood();
-        return food; // retorna item coletado para acionarmos feedback externo
+    const events = [];
+    for (const snake of snakes) {
+      for (const food of this.foodItems) {
+        if (food.collected) continue;
+        const head = snake.headPosition;
+        const dx = head.x - food.position.x;
+        const dy = head.y - food.position.y;
+        const radius = food.baseRadius + snake.radius;
+        if (dx * dx + dy * dy < radius * radius) {
+          food.collected = true;
+          food.burst();
+          snake.grow();
+          this.lastSpawnTime = time;
+          events.push({ snake, food });
+          break;
+        }
       }
     }
 
-    return null;
+    const activeFood = this.foodItems.filter((food) => !food.collected).length;
+    if (activeFood < this.targetFoodCount) {
+      const missing = this.targetFoodCount - activeFood;
+      for (let i = 0; i < missing; i++) {
+        this.spawnFood();
+      }
+    } else if (time - this.lastSpawnTime > GameConfig.foodSpawnInterval && activeFood === 0) {
+      this.spawnFood();
+    }
+
+    return events;
   }
 
   // Sorteia posição dentro do espaço da arena.
