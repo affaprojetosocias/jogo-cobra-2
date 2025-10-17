@@ -1,3 +1,14 @@
+:root {
+  --viewport-height: 100vh;
+  --page-padding: clamp(16px, 4vw, 48px);
+}
+
+@supports (height: 100dvh) {
+  :root {
+    --viewport-height: 100dvh;
+  }
+}
+
 html {
   height: 100%;
 }
@@ -12,20 +23,14 @@ html {
 body {
   background: radial-gradient(circle at top, #1f1147, #05010e 70%);
   color: #f4f3ff;
-  min-height: 100vh;
+  min-height: var(--viewport-height);
   margin: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  padding: clamp(16px, 4vw, 48px);
+  padding: var(--page-padding);
   position: relative;
-}
-
-@supports (height: 100dvh) {
-  body {
-    min-height: 100dvh;
-  }
 }
 
 .background {
@@ -41,8 +46,10 @@ body {
 
 .game-wrapper {
   position: relative;
-  width: min(92vw, 960px);
-  height: min(85vh, 640px);
+  width: min(100%, 960px);
+  max-width: min(calc(100vw - 2 * var(--page-padding)), 960px);
+  height: min(100%, 640px);
+  max-height: min(calc(var(--viewport-height) - 2 * var(--page-padding)), 640px);
   border-radius: 20px;
   overflow: hidden;
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45);
@@ -234,25 +241,29 @@ body {
 }
 
 @media (max-width: 1024px) {
-  body {
-    padding: clamp(12px, 3vw, 32px);
+  :root {
+    --page-padding: clamp(12px, 3vw, 32px);
   }
 
   .game-wrapper {
-    width: min(95vw, 880px);
-    height: min(82vh, 600px);
+    max-width: min(calc(100vw - 2 * var(--page-padding)), 880px);
+    max-height: min(calc(var(--viewport-height) - 2 * var(--page-padding)), 600px);
   }
 }
 
 @media (max-width: 900px) and (orientation: landscape) {
+  :root {
+    --page-padding: 0px;
+  }
+
   body {
-    padding: 0;
+    padding: var(--page-padding);
     align-items: stretch;
   }
 
   .game-wrapper {
     width: 100vw;
-    height: 100vh;
+    height: var(--viewport-height);
     border-radius: 0;
     box-shadow: none;
     backdrop-filter: none;
@@ -307,30 +318,6 @@ body {
   }
 }
 
-@media (orientation: portrait) and (max-width: 900px) {
-  body {
-    padding: 0;
-  }
-
-  .game-wrapper {
-    filter: blur(6px);
-    opacity: 0.4;
-    pointer-events: none;
-  }
-
-  .hud {
-    opacity: 0;
-  }
-
-  .orientation-overlay {
-    display: flex;
-  }
-
-  .mobile-controls {
-    display: none !important;
-  }
-}
-
 @media (max-width: 768px) {
   .hud {
     flex-direction: row;
@@ -344,6 +331,40 @@ body {
 
 @media (min-width: 901px) {
   .mobile-controls {
+    display: none !important;
+  }
+}
+
+@media (orientation: portrait) and (max-width: 900px) {
+  :root {
+    --page-padding: clamp(8px, 4vw, 16px);
+  }
+
+  body {
+    padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+      calc(env(safe-area-inset-bottom, 0px) + 12px)
+      env(safe-area-inset-left, 0px);
+    align-items: stretch;
+  }
+
+  .game-wrapper {
+    width: 100vw;
+    height: var(--viewport-height);
+    max-width: none;
+    max-height: none;
+    border-radius: 0;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  @supports (width: 100dvw) and (height: 100dvh) {
+    .game-wrapper {
+      width: 100dvw;
+      height: 100dvh;
+    }
+  }
+
+  .orientation-overlay {
     display: none !important;
   }
 }
