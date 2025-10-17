@@ -1,6 +1,6 @@
 // Responsável por traduzir entradas de teclado, mouse e toque em uma direção alvo.
 export class InputManager {
-  constructor(canvas) {
+  constructor(canvas, options = {}) {
     this.canvas = canvas;
     this.activeVector = { x: 1, y: 0 };
     this.mouseVector = null;
