@@ -11,6 +11,11 @@ export class InputManager {
     this.pointerId = null;
     this.swipeStart = null;
     this.swipeThreshold = 18;
+    this.controlButtons = Array.from(options.controlButtons || []);
+    this.controlButtonHandlers = [];
+    this.touchMoveFrame = null;
+    this.lastTouchPoint = null;
+    this.touchSmoothing = 0.22;
 
     this.handleKeyDown = this.handleKeyDown.bind(this);
     this.handleKeyUp = this.handleKeyUp.bind(this);
@@ -37,6 +42,67 @@ export class InputManager {
     window.removeEventListener('pointermove', this.handlePointerMove, { passive: false });
     window.removeEventListener('pointerup', this.handlePointerUp);
     window.removeEventListener('pointercancel', this.handlePointerCancel);
+    this.unbindDirectionalButtons();
+    this.cancelTouchUpdate();
+  }
+
+  bindDirectionalButtons() {
+    if (!this.controlButtons.length) {
+      return;
+    }
+
+    const map = {
+      up: { x: 0, y: -1 },
+      down: { x: 0, y: 1 },
+      left: { x: -1, y: 0 },
+      right: { x: 1, y: 0 },
+    };
+
+    for (const button of this.controlButtons) {
+      const direction = button.dataset.direction;
+      const vector = map[direction];
+      if (!vector) continue;
+
+      const pointerDown = (event) => {
+        event.preventDefault();
+        this.applyDirectionalInput(vector);
+      };
+
+      const pointerEnter = (event) => {
+        if ((event.buttons & 1) === 0) {
+          return;
+        }
+        event.preventDefault();
+        this.applyDirectionalInput(vector);
+      };
+
+      const activate = (event) => {
+        event.preventDefault();
+        this.applyDirectionalInput(vector);
+      };
+
+      button.addEventListener('pointerdown', pointerDown, { passive: false });
+      button.addEventListener('pointerenter', pointerEnter, { passive: false });
+      button.addEventListener('click', activate);
+
+      this.controlButtonHandlers.push({
+        button,
+        handlers: [
+          ['pointerdown', pointerDown],
+          ['pointerenter', pointerEnter],
+          ['click', activate],
+        ],
+      });
+    }
+  }
+
+  unbindDirectionalButtons() {
+    for (const binding of this.controlButtonHandlers) {
+      for (const [event, handler] of binding.handlers) {
+        binding.button.removeEventListener(event, handler);
+      }
+    }
+    this.controlButtonHandlers = [];
   }
 
   handleKeyDown(event) {
@@ -57,7 +123,9 @@ export class InputManager {
     this.pointerId = event.pointerId;
 
     if (this.pointerMode === 'touch') {
+      this.cancelTouchUpdate();
       this.swipeStart = { x: event.clientX, y: event.clientY };
+      this.lastTouchPoint = { x: event.clientX, y: event.clientY };
       this.mouseVector = this.mouseVector || { ...this.activeVector };
       if (typeof this.canvas.setPointerCapture === 'function') {
         this.canvas.setPointerCapture(event.pointerId);
@@ -75,15 +143,8 @@ export class InputManager {
     }
 
     if (this.pointerMode === 'touch') {
-      const dx = event.clientX - this.swipeStart.x;
-      const dy = event.clientY - this.swipeStart.y;
-      const distance = Math.hypot(dx, dy);
-
-      if (distance > this.swipeThreshold) {
-        const vector = { x: dx / distance, y: dy / distance };
-        this.mouseVector = vector;
-        this.activeVector = vector;
-      }
+      this.lastTouchPoint = { x: event.clientX, y: event.clientY };
+      this.scheduleTouchUpdate();
       event.preventDefault();
       return;
     }
@@ -96,6 +157,7 @@ export class InputManager {
       this.isPointerActive = false;
       this.pointerId = null;
       this.swipeStart = null;
+      this.cancelTouchUpdate();
       if (typeof this.canvas.releasePointerCapture === 'function') {
         this.canvas.releasePointerCapture(event.pointerId);
       }
@@ -118,6 +180,59 @@ export class InputManager {
       return;
     }
     this.pointerAnchor = { x, y };
+  }
+
+  scheduleTouchUpdate() {
+    if (this.touchMoveFrame !== null) {
+      return;
+    }
+    this.touchMoveFrame = requestAnimationFrame(() => {
+      this.touchMoveFrame = null;
+      this.flushTouchMovement();
+    });
+  }
+
+  flushTouchMovement() {
+    if (!this.isPointerActive || !this.swipeStart || !this.lastTouchPoint) {
+      return;
+    }
+
+    const dx = this.lastTouchPoint.x - this.swipeStart.x;
+    const dy = this.lastTouchPoint.y - this.swipeStart.y;
+    const distance = Math.hypot(dx, dy);
+
+    if (distance <= this.swipeThreshold) {
+      return;
+    }
+
+    const vector = { x: dx / distance, y: dy / distance };
+    const smoothing = this.touchSmoothing;
+    const smoothed = {
+      x: this.activeVector.x + (vector.x - this.activeVector.x) * smoothing,
+      y: this.activeVector.y + (vector.y - this.activeVector.y) * smoothing,
+    };
+    const length = Math.hypot(smoothed.x, smoothed.y) || 1;
+    this.activeVector = { x: smoothed.x / length, y: smoothed.y / length };
+    this.mouseVector = { ...this.activeVector };
+  }
+
+  cancelTouchUpdate() {
+    if (this.touchMoveFrame !== null) {
+      cancelAnimationFrame(this.touchMoveFrame);
+      this.touchMoveFrame = null;
+    }
+    this.lastTouchPoint = null;
+  }
+
+  applyDirectionalInput(vector) {
+    const length = Math.hypot(vector.x, vector.y) || 1;
+    this.activeVector = { x: vector.x / length, y: vector.y / length };
+    this.mouseVector = null;
+    this.keys.clear();
+    this.pointerMode = 'virtual';
+    this.isPointerActive = false;
+    this.pointerAnchor = null;
+    this.cancelTouchUpdate();
   }
 
   // Converte posição do ponteiro para vetor relativo ao centro da tela.

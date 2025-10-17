@@ -39,6 +39,7 @@ export class SnakeGame {
     this.resizeObserver.observe(canvas.parentElement);
     window.addEventListener('resize', this.handleResize);
     window.addEventListener('orientationchange', this.handleResize);
+    window.addEventListener('viewportmetricschange', this.handleResize);
     this.handleResize();
   }
 
@@ -58,23 +59,29 @@ export class SnakeGame {
   }
 
   handleResize() {
-    const rect = this.canvas.getBoundingClientRect();
+    const viewport = this.getViewportSize();
+    const rect = this.canvas.parentElement.getBoundingClientRect();
+    const width = Math.max(Math.round(rect.width), 1);
+    const height = Math.max(Math.round(rect.height), 1);
+
     this.renderer = new Renderer(this.canvas);
-    this.renderer.resize(rect.width, rect.height);
-    this.camera.width = rect.width;
-    this.camera.height = rect.height;
-    this.calculateArenaDimensions();
+    this.renderer.resize(width, height);
+    this.camera.width = width;
+    this.camera.height = height;
+    this.calculateArenaDimensions(viewport.width, viewport.height);
     if (this.foodManager) {
       this.foodManager.syncWithArena();
     }
     this.updateCamera(true);
   }
 
-  calculateArenaDimensions() {
-    const viewportWidth = window.innerWidth || this.canvas.clientWidth;
-    const viewportHeight = window.innerHeight || this.canvas.clientHeight;
-    const longSide = Math.max(viewportWidth, viewportHeight);
-    const shortSide = Math.max(Math.min(viewportWidth, viewportHeight), 480);
+  calculateArenaDimensions(viewportWidth, viewportHeight) {
+    const fallbackWidth = this.canvas.clientWidth || viewportWidth;
+    const fallbackHeight = this.canvas.clientHeight || viewportHeight;
+    const safeWidth = viewportWidth || fallbackWidth;
+    const safeHeight = viewportHeight || fallbackHeight;
+    const longSide = Math.max(safeWidth, safeHeight);
+    const shortSide = Math.max(Math.min(safeWidth, safeHeight), 480);
 
     const widthScale = longSide / 900;
     const heightScale = shortSide / 700;
@@ -112,8 +119,34 @@ export class SnakeGame {
       targetHeight = Math.min(GameConfig.worldMaxHeight, Math.max(targetHeight, paddedHeight));
     }
 
-    this.arena.width = targetWidth;
-    this.arena.height = targetHeight;
+    const minimumWidth = Math.max(safeWidth, this.camera.width);
+    const minimumHeight = Math.max(safeHeight, this.camera.height);
+    this.arena.width = Math.max(targetWidth, minimumWidth);
+    this.arena.height = Math.max(targetHeight, minimumHeight);
+  }
+
+  getViewportSize() {
+    const docStyles = getComputedStyle(document.documentElement);
+    const widthValue = docStyles.getPropertyValue('--app-width').trim();
+    const heightValue = docStyles.getPropertyValue('--app-height').trim();
+    const viewport = window.visualViewport;
+    const fallbackWidth = Math.max(
+      Math.round(viewport ? viewport.width : window.innerWidth || this.canvas.clientWidth || 0),
+      1
+    );
+    const fallbackHeight = Math.max(
+      Math.round(viewport ? viewport.height : window.innerHeight || this.canvas.clientHeight || 0),
+      1
+    );
+    const widthCandidate = parseFloat(widthValue);
+    const heightCandidate = parseFloat(heightValue);
+    const hasPixelWidth =
+      Number.isFinite(widthCandidate) && widthCandidate > 0 && widthValue.endsWith('px');
+    const hasPixelHeight =
+      Number.isFinite(heightCandidate) && heightCandidate > 0 && heightValue.endsWith('px');
+    const width = hasPixelWidth ? Math.max(Math.round(widthCandidate), 1) : fallbackWidth;
+    const height = hasPixelHeight ? Math.max(Math.round(heightCandidate), 1) : fallbackHeight;
+    return { width, height };
   }
 
   // Inicializa uma nova partida resetando estados e criando entidades.
