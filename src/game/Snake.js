@@ -30,9 +30,10 @@ export class Snake {
   }
 
   // Aumenta levemente a velocidade e agenda crescimento do corpo.
-  grow() {
-    this.growQueued += 4; // adiciona múltiplos segmentos para crescimento suave
-    this.speed += GameConfig.speedGrowthFactor;
+  grow(segments = GameConfig.defaultGrowthSegments) {
+    this.growQueued += segments; // adiciona múltiplos segmentos para crescimento suave
+    const ratio = segments / GameConfig.defaultGrowthSegments;
+    this.speed += GameConfig.speedGrowthFactor * ratio;
   }
 
   // Atualiza posição, suaviza rotação e aplica espaçamento entre segmentos.

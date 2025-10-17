@@ -56,10 +56,11 @@ export class Renderer {
       const radius = food.getAnimatedRadius(time);
       const fx = food.position.x - camera.x;
       const fy = food.position.y - camera.y;
-      const gradient = ctx.createRadialGradient(fx, fy, radius * 0.3, fx, fy, radius);
-      gradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
-      gradient.addColorStop(0.4, 'rgba(255, 200, 80, 0.9)');
-      gradient.addColorStop(1, 'rgba(255, 80, 160, 0.0)');
+      const colors = food.getColors();
+      const gradient = ctx.createRadialGradient(fx, fy, radius * 0.28, fx, fy, radius);
+      gradient.addColorStop(0, colors.inner);
+      gradient.addColorStop(0.5, colors.mid);
+      gradient.addColorStop(1, colors.outer);
 
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
@@ -70,10 +71,10 @@ export class Renderer {
       ctx.restore();
 
       // Desenha partículas residuais.
-      ctx.fillStyle = 'rgba(255, 220, 150, 0.8)';
       for (const particle of food.particles) {
         const px = particle.x - camera.x;
         const py = particle.y - camera.y;
+        ctx.fillStyle = particle.color || colors.mid;
         ctx.beginPath();
         ctx.arc(px, py, particle.radius, 0, Math.PI * 2);
         ctx.fill();

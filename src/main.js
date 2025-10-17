@@ -10,6 +10,8 @@ const ui = {
   gameOverOverlay: document.getElementById('gameover-overlay'),
   finalScore: document.getElementById('final-score'),
   restartButton: document.getElementById('restart-button'),
+  mobileControls: document.getElementById('mobile-controls'),
+  mobileButtons: document.querySelectorAll('#mobile-controls [data-direction]'),
 };
 
 const game = new SnakeGame(canvas, ui);

@@ -1,6 +1,6 @@
 // Responsável por traduzir entradas de teclado, mouse e toque em uma direção alvo.
 export class InputManager {
-  constructor(canvas) {
+  constructor(canvas, options = {}) {
     this.canvas = canvas;
     this.activeVector = { x: 1, y: 0 };
     this.mouseVector = null;
@@ -11,6 +11,8 @@ export class InputManager {
     this.pointerId = null;
     this.swipeStart = null;
     this.swipeThreshold = 18;
+    this.controlButtons = Array.from(options.controlButtons || []);
+    this.controlButtonHandlers = [];
 
     this.handleKeyDown = this.handleKeyDown.bind(this);
     this.handleKeyUp = this.handleKeyUp.bind(this);
@@ -28,6 +30,7 @@ export class InputManager {
     window.addEventListener('pointermove', this.handlePointerMove, { passive: false });
     window.addEventListener('pointerup', this.handlePointerUp);
     window.addEventListener('pointercancel', this.handlePointerCancel);
+    this.bindDirectionalButtons();
   }
 
   detach() {
@@ -37,6 +40,66 @@ export class InputManager {
     window.removeEventListener('pointermove', this.handlePointerMove, { passive: false });
     window.removeEventListener('pointerup', this.handlePointerUp);
     window.removeEventListener('pointercancel', this.handlePointerCancel);
+    this.unbindDirectionalButtons();
+  }
+
+  bindDirectionalButtons() {
+    if (!this.controlButtons.length) {
+      return;
+    }
+
+    const map = {
+      up: { x: 0, y: -1 },
+      down: { x: 0, y: 1 },
+      left: { x: -1, y: 0 },
+      right: { x: 1, y: 0 },
+    };
+
+    for (const button of this.controlButtons) {
+      const direction = button.dataset.direction;
+      const vector = map[direction];
+      if (!vector) continue;
+
+      const pointerDown = (event) => {
+        event.preventDefault();
+        this.applyDirectionalInput(vector);
+      };
+
+      const pointerEnter = (event) => {
+        if ((event.buttons & 1) === 0) {
+          return;
+        }
+        event.preventDefault();
+        this.applyDirectionalInput(vector);
+      };
+
+      const activate = (event) => {
+        event.preventDefault();
+        this.applyDirectionalInput(vector);
+      };
+
+      button.addEventListener('pointerdown', pointerDown, { passive: false });
+      button.addEventListener('pointerenter', pointerEnter, { passive: false });
+      button.addEventListener('click', activate);
+
+      this.controlButtonHandlers.push({
+        button,
+        handlers: [
+          ['pointerdown', pointerDown],
+          ['pointerenter', pointerEnter],
+          ['click', activate],
+        ],
+      });
+    }
+  }
+
+  unbindDirectionalButtons() {
+    for (const binding of this.controlButtonHandlers) {
+      for (const [event, handler] of binding.handlers) {
+        binding.button.removeEventListener(event, handler);
+      }
+    }
+    this.controlButtonHandlers = [];
   }
 
   handleKeyDown(event) {
@@ -114,10 +177,20 @@ export class InputManager {
   }
 
   setPointerAnchor(x, y) {
-    if (this.pointerMode === 'touch') {
+    if (this.pointerMode === 'touch' || this.pointerMode === 'virtual') {
       return;
     }
     this.pointerAnchor = { x, y };
+  }
+
+  applyDirectionalInput(vector) {
+    const length = Math.hypot(vector.x, vector.y) || 1;
+    this.activeVector = { x: vector.x / length, y: vector.y / length };
+    this.mouseVector = null;
+    this.keys.clear();
+    this.pointerMode = 'virtual';
+    this.isPointerActive = false;
+    this.pointerAnchor = null;
   }
 
   // Converte posição do ponteiro para vetor relativo ao centro da tela.
