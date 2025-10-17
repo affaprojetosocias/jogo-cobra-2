@@ -30,6 +30,10 @@ O jogo é totalmente client-side, bastando um navegador moderno (Chrome, Firefox
 - Sons para coleta e fim de jogo.
 - Reinício rápido após o game over.
 
+## Testes e validação de layout
+
+- Consulte `docs/mobile-testing-checklist.md` para o roteiro completo de verificação em emuladores e dispositivos físicos, incluindo comportamentos esperados por breakpoints e uma lista de regressão para garantir que o modo desktop permaneça intacto.
+
 ## Estrutura do código
 
 - `index.html`: estrutura base, HUD e inicialização do canvas.
