@@ -12,9 +12,7 @@ export class SnakeGame {
     this.canvas = canvas;
     this.ui = ui;
     this.renderer = new Renderer(canvas);
-    this.mobileControls = ui.mobileControls || null;
-    this.mobileButtons = Array.from(ui.mobileButtons || []);
-    this.input = new InputManager(canvas, { controlButtons: this.mobileButtons });
+    this.input = new InputManager(canvas);
     this.audio = new AudioManager();
 
     this.state = 'waiting';
@@ -34,8 +32,6 @@ export class SnakeGame {
     this.handleStartInput = this.handleStartInput.bind(this);
     this.gameLoop = this.gameLoop.bind(this);
     this.restart = this.restart.bind(this);
-    this.setMobileControlsVisibility(false);
-
     ui.highscoreValue.textContent = this.highScore.toString();
     ui.restartButton.addEventListener('click', this.restart);
 
@@ -59,14 +55,6 @@ export class SnakeGame {
       this.ui.startOverlay.addEventListener('pointerdown', this.handleStartInput, { once: true });
       this.ui.startOverlay.addEventListener('click', this.handleStartInput, { once: true });
     }
-  }
-
-  setMobileControlsVisibility(visible) {
-    if (!this.mobileControls) {
-      return;
-    }
-    this.mobileControls.classList.toggle('is-visible', visible);
-    this.mobileControls.setAttribute('aria-hidden', (!visible).toString());
   }
 
   handleResize() {
@@ -143,7 +131,6 @@ export class SnakeGame {
     this.ui.timeValue.textContent = '00:00';
     this.ui.startOverlay.classList.remove('visible');
     this.ui.gameOverOverlay.classList.remove('visible');
-    this.setMobileControlsVisibility(true);
     cancelAnimationFrame(this.animationFrame);
     this.animationFrame = requestAnimationFrame(this.gameLoop);
     this.updateCamera(true);
@@ -162,7 +149,6 @@ export class SnakeGame {
       this.state = 'waiting';
       this.ui.startOverlay.classList.add('visible');
       this.ui.gameOverOverlay.classList.remove('visible');
-      this.setMobileControlsVisibility(false);
       this.setupStartListeners();
     }
   }
