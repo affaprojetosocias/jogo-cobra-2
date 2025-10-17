@@ -28,16 +28,19 @@ export class SnakeGame {
     this.arena = { width: GameConfig.worldWidth, height: GameConfig.worldHeight };
     this.camera = { x: 0, y: 0, width: canvas.clientWidth, height: canvas.clientHeight };
 
-    this.resizeObserver = new ResizeObserver(() => this.handleResize());
-    this.resizeObserver.observe(canvas.parentElement);
-    this.handleResize();
-
+    this.handleResize = this.handleResize.bind(this);
     this.handleStartInput = this.handleStartInput.bind(this);
     this.gameLoop = this.gameLoop.bind(this);
     this.restart = this.restart.bind(this);
 
     ui.highscoreValue.textContent = this.highScore.toString();
     ui.restartButton.addEventListener('click', this.restart);
+
+    this.resizeObserver = new ResizeObserver(() => this.handleResize());
+    this.resizeObserver.observe(canvas.parentElement);
+    window.addEventListener('resize', this.handleResize);
+    window.addEventListener('orientationchange', this.handleResize);
+    this.handleResize();
   }
 
   // Inicializa eventos de entrada e exibe a mensagem inicial.
@@ -53,7 +56,57 @@ export class SnakeGame {
     this.renderer.resize(rect.width, rect.height);
     this.camera.width = rect.width;
     this.camera.height = rect.height;
+    this.calculateArenaDimensions();
+    if (this.foodManager) {
+      this.foodManager.syncWithArena();
+    }
     this.updateCamera(true);
+  }
+
+  calculateArenaDimensions() {
+    const viewportWidth = window.innerWidth || this.canvas.clientWidth;
+    const viewportHeight = window.innerHeight || this.canvas.clientHeight;
+    const longSide = Math.max(viewportWidth, viewportHeight);
+    const shortSide = Math.max(Math.min(viewportWidth, viewportHeight), 480);
+
+    const widthScale = longSide / 900;
+    const heightScale = shortSide / 700;
+
+    let targetWidth = clamp(
+      Math.round(GameConfig.worldWidth * widthScale),
+      GameConfig.worldMinWidth,
+      GameConfig.worldMaxWidth
+    );
+    let targetHeight = clamp(
+      Math.round(GameConfig.worldHeight * heightScale),
+      GameConfig.worldMinHeight,
+      GameConfig.worldMaxHeight
+    );
+
+    if (this.snakes && this.snakes.length > 0) {
+      let maxX = 0;
+      let maxY = 0;
+      for (const snake of this.snakes) {
+        for (const segment of snake.getSegments()) {
+          if (segment.x > maxX) maxX = segment.x;
+          if (segment.y > maxY) maxY = segment.y;
+        }
+      }
+      if (this.foodManager) {
+        for (const food of this.foodManager.foodItems) {
+          if (food.collected) continue;
+          if (food.position.x > maxX) maxX = food.position.x;
+          if (food.position.y > maxY) maxY = food.position.y;
+        }
+      }
+      const paddedWidth = maxX + GameConfig.arenaPadding;
+      const paddedHeight = maxY + GameConfig.arenaPadding;
+      targetWidth = Math.min(GameConfig.worldMaxWidth, Math.max(targetWidth, paddedWidth));
+      targetHeight = Math.min(GameConfig.worldMaxHeight, Math.max(targetHeight, paddedHeight));
+    }
+
+    this.arena.width = targetWidth;
+    this.arena.height = targetHeight;
   }
 
   // Inicializa uma nova partida resetando estados e criando entidades.
@@ -149,9 +202,12 @@ export class SnakeGame {
 
   createAISnakes() {
     const snakes = [];
-    for (let i = 0; i < GameConfig.aiSnakeCount; i++) {
+    const targetCount = this.getAISnakeCount();
+    for (let i = 0; i < targetCount; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const distance = 240 + Math.random() * 260;
+      const spreadRadius = Math.min(this.arena.width, this.arena.height) * 0.35;
+      const minRadius = Math.min(this.arena.width, this.arena.height) * 0.18;
+      const distance = minRadius + Math.random() * (spreadRadius - minRadius);
       const startX = clamp(
         this.arena.width / 2 + Math.cos(angle) * distance,
         GameConfig.arenaPadding,
@@ -210,6 +266,13 @@ export class SnakeGame {
     this.audio.playGameOver();
     this.ui.finalScore.textContent = this.score.toString();
     this.ui.gameOverOverlay.classList.add('visible');
+  }
+
+  getAISnakeCount() {
+    const areaFactor = (this.arena.width * this.arena.height) / 100000;
+    const densityCount = Math.round(areaFactor * GameConfig.aiDensity);
+    const desired = Math.max(GameConfig.aiSnakeCount, densityCount);
+    return clamp(desired, GameConfig.aiSnakeCount, GameConfig.aiMaxCount);
   }
 
   updateCamera(force = false) {
