@@ -335,8 +335,3 @@ body {
   }
 }
 
-@media (min-width: 901px) {
-  .mobile-controls {
-    display: none !important;
-  }
-}

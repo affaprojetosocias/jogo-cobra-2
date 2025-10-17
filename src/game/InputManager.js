@@ -1,6 +1,6 @@
 // Responsável por traduzir entradas de teclado, mouse e toque em uma direção alvo.
 export class InputManager {
-  constructor(canvas, options = {}) {
+  constructor(canvas) {
     this.canvas = canvas;
     this.activeVector = { x: 1, y: 0 };
     this.mouseVector = null;
@@ -33,7 +33,6 @@ export class InputManager {
     window.addEventListener('pointermove', this.handlePointerMove, { passive: false });
     window.addEventListener('pointerup', this.handlePointerUp);
     window.addEventListener('pointercancel', this.handlePointerCancel);
-    this.bindDirectionalButtons();
   }
 
   detach() {
@@ -177,7 +176,7 @@ export class InputManager {
   }
 
   setPointerAnchor(x, y) {
-    if (this.pointerMode === 'touch' || this.pointerMode === 'virtual') {
+    if (this.pointerMode === 'touch') {
       return;
     }
     this.pointerAnchor = { x, y };
