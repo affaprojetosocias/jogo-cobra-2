@@ -71,7 +71,7 @@ export class FoodManager {
         if (dx * dx + dy * dy < radius * radius) {
           food.collected = true;
           food.burst();
-          snake.grow();
+          snake.grow(food.growthSegments);
           this.lastSpawnTime = time;
           events.push({ snake, food });
           break;
@@ -97,7 +97,8 @@ export class FoodManager {
   spawnFood() {
     const x = GameConfig.arenaPadding + Math.random() * (this.arena.width - GameConfig.arenaPadding * 2);
     const y = GameConfig.arenaPadding + Math.random() * (this.arena.height - GameConfig.arenaPadding * 2);
-    const food = new Food({ x, y });
+    const type = Math.random() < GameConfig.foodLargeChance ? 'large' : 'small';
+    const food = new Food({ x, y, type });
     this.foodItems.push(food);
     this.lastSpawnTime = performance.now() / 1000;
   }
