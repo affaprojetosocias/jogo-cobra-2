@@ -7,29 +7,36 @@ export class InputManager {
     this.keys = new Set();
     this.isPointerActive = false;
     this.pointerAnchor = null;
+    this.pointerMode = 'mouse';
+    this.pointerId = null;
+    this.swipeStart = null;
+    this.swipeThreshold = 18;
 
     this.handleKeyDown = this.handleKeyDown.bind(this);
     this.handleKeyUp = this.handleKeyUp.bind(this);
     this.handlePointerDown = this.handlePointerDown.bind(this);
     this.handlePointerMove = this.handlePointerMove.bind(this);
     this.handlePointerUp = this.handlePointerUp.bind(this);
+    this.handlePointerCancel = this.handlePointerCancel.bind(this);
   }
 
   // Inicia escuta de eventos e garante limpeza posterior.
   attach() {
     window.addEventListener('keydown', this.handleKeyDown);
     window.addEventListener('keyup', this.handleKeyUp);
-    this.canvas.addEventListener('pointerdown', this.handlePointerDown);
-    window.addEventListener('pointermove', this.handlePointerMove);
+    this.canvas.addEventListener('pointerdown', this.handlePointerDown, { passive: false });
+    window.addEventListener('pointermove', this.handlePointerMove, { passive: false });
     window.addEventListener('pointerup', this.handlePointerUp);
+    window.addEventListener('pointercancel', this.handlePointerCancel);
   }
 
   detach() {
     window.removeEventListener('keydown', this.handleKeyDown);
     window.removeEventListener('keyup', this.handleKeyUp);
-    this.canvas.removeEventListener('pointerdown', this.handlePointerDown);
-    window.removeEventListener('pointermove', this.handlePointerMove);
+    this.canvas.removeEventListener('pointerdown', this.handlePointerDown, { passive: false });
+    window.removeEventListener('pointermove', this.handlePointerMove, { passive: false });
     window.removeEventListener('pointerup', this.handlePointerUp);
+    window.removeEventListener('pointercancel', this.handlePointerCancel);
   }
 
   handleKeyDown(event) {
@@ -45,21 +52,71 @@ export class InputManager {
   }
 
   handlePointerDown(event) {
+    this.pointerMode = event.pointerType === 'touch' ? 'touch' : 'mouse';
     this.isPointerActive = true;
+    this.pointerId = event.pointerId;
+
+    if (this.pointerMode === 'touch') {
+      this.swipeStart = { x: event.clientX, y: event.clientY };
+      this.mouseVector = this.mouseVector || { ...this.activeVector };
+      if (typeof this.canvas.setPointerCapture === 'function') {
+        this.canvas.setPointerCapture(event.pointerId);
+      }
+      event.preventDefault();
+      return;
+    }
+
     this.updatePointerVector(event);
   }
 
   handlePointerMove(event) {
-    if (!this.isPointerActive) return;
+    if (!this.isPointerActive || (this.pointerMode === 'touch' && event.pointerId !== this.pointerId)) {
+      return;
+    }
+
+    if (this.pointerMode === 'touch') {
+      const dx = event.clientX - this.swipeStart.x;
+      const dy = event.clientY - this.swipeStart.y;
+      const distance = Math.hypot(dx, dy);
+
+      if (distance > this.swipeThreshold) {
+        const vector = { x: dx / distance, y: dy / distance };
+        this.mouseVector = vector;
+        this.activeVector = vector;
+      }
+      event.preventDefault();
+      return;
+    }
+
     this.updatePointerVector(event);
   }
 
-  handlePointerUp() {
+  handlePointerUp(event) {
+    if (this.pointerMode === 'touch' && event.pointerId === this.pointerId) {
+      this.isPointerActive = false;
+      this.pointerId = null;
+      this.swipeStart = null;
+      if (typeof this.canvas.releasePointerCapture === 'function') {
+        this.canvas.releasePointerCapture(event.pointerId);
+      }
+      return;
+    }
+
     this.isPointerActive = false;
     this.mouseVector = null;
+    this.pointerAnchor = null;
+  }
+
+  handlePointerCancel(event) {
+    if (event.pointerId === this.pointerId) {
+      this.handlePointerUp(event);
+    }
   }
 
   setPointerAnchor(x, y) {
+    if (this.pointerMode === 'touch') {
+      return;
+    }
     this.pointerAnchor = { x, y };
   }
 

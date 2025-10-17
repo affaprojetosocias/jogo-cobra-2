@@ -7,10 +7,50 @@ export class FoodManager {
     this.arena = arena;
     this.foodItems = [];
     this.lastSpawnTime = 0;
-    this.targetFoodCount = GameConfig.maxFoodItems;
+    this.targetFoodCount = 0;
+    this.recalculateTarget();
+    this.populateInitialFood();
+  }
+
+  populateInitialFood() {
     for (let i = 0; i < this.targetFoodCount; i++) {
       this.spawnFood();
     }
+  }
+
+  recalculateTarget() {
+    const areaFactor = (this.arena.width * this.arena.height) / 100000;
+    const densityTarget = Math.round(areaFactor * GameConfig.foodDensity);
+    const bounded = Math.min(GameConfig.foodMaxCount, densityTarget);
+    this.targetFoodCount = Math.max(GameConfig.maxFoodItems, bounded);
+  }
+
+  syncWithArena() {
+    const previous = this.targetFoodCount;
+    this.recalculateTarget();
+    if (this.targetFoodCount > previous) {
+      const missing = this.targetFoodCount - this.getActiveFoodCount();
+      for (let i = 0; i < missing; i++) {
+        this.spawnFood();
+      }
+    } else if (this.targetFoodCount < previous) {
+      const active = this.getActiveFoodCount();
+      const excess = Math.max(0, active - this.targetFoodCount);
+      if (excess > 0) {
+        let removed = 0;
+        this.foodItems = this.foodItems.filter((food) => {
+          if (!food.collected && removed < excess) {
+            removed++;
+            return false;
+          }
+          return true;
+        });
+      }
+    }
+  }
+
+  getActiveFoodCount() {
+    return this.foodItems.filter((food) => !food.collected).length;
   }
 
   // Atualiza comida existente e garante que sempre exista uma grande variedade no cenário.
@@ -39,7 +79,8 @@ export class FoodManager {
       }
     }
 
-    const activeFood = this.foodItems.filter((food) => !food.collected).length;
+    this.recalculateTarget();
+    const activeFood = this.getActiveFoodCount();
     if (activeFood < this.targetFoodCount) {
       const missing = this.targetFoodCount - activeFood;
       for (let i = 0; i < missing; i++) {

@@ -12,8 +12,16 @@ export const GameConfig = {
   particleCount: 12,
   worldWidth: 2600,
   worldHeight: 2000,
-  aiSnakeCount: 5,
-  maxFoodItems: 14,
+  worldMinWidth: 2000,
+  worldMinHeight: 1500,
+  worldMaxWidth: 4400,
+  worldMaxHeight: 3200,
+  aiSnakeCount: 6,
+  aiMaxCount: 16,
+  aiDensity: 0.2, // quantidade de cobras IA por 100k px² da arena
+  maxFoodItems: 28,
+  foodMaxCount: 96,
+  foodDensity: 0.75, // quantidade de comidas por 100k px² da arena
   aiColors: ['#8de0ff', '#ffd08d', '#9dffb0', '#ffb3f5', '#a3a3ff', '#ff9e9e'],
   aiAvoidanceRadius: 90,
   aiAvoidanceStrength: 240,
